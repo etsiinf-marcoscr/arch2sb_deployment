@@ -12,11 +12,11 @@ set -e
 
 STACK_NAME="arch2sb"
 REGION="us-east-1"
+ALB_NAME="cafe-shared-alb"
 
 echo "============================================="
 echo " Cafe Adaptacion Sandbox - Teardown"
 echo "============================================="
-#TODO: Borrar antes ALB
 
 # ---------------------------------------------
 # Helpers
@@ -44,6 +44,49 @@ if [ "$STACK_STATUS" = "DOES_NOT_EXIST" ]; then
 fi
 
 echo "Stack encontrado en estado: $STACK_STATUS"
+
+# ---------------------------------------------
+# 0. Borrar el ALB compartido
+# ---------------------------------------------
+echo ""
+echo ">>> Eliminando ALB compartido..."
+
+ALB_ARN=$(aws elbv2 describe-load-balancers \
+  --names "$ALB_NAME" \
+  --query "LoadBalancers[0].LoadBalancerArn" \
+  --output text \
+  --region "$REGION" 2>/dev/null || echo "")
+
+if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+  LISTENER_ARNS=$(aws elbv2 describe-listeners \
+    --load-balancer-arn "$ALB_ARN" \
+    --query "Listeners[].ListenerArn" \
+    --output text \
+    --region "$REGION" 2>/dev/null || echo "")
+
+  if [ -n "$LISTENER_ARNS" ] && [ "$LISTENER_ARNS" != "None" ]; then
+    for LISTENER_ARN in $LISTENER_ARNS; do
+      aws elbv2 delete-listener \
+        --listener-arn "$LISTENER_ARN" \
+        --region "$REGION"
+      echo "  ✓ Listener borrado: $LISTENER_ARN"
+    done
+  else
+    echo "  No se encontraron listeners para el ALB (continuando)"
+  fi
+
+  aws elbv2 delete-load-balancer \
+    --load-balancer-arn "$ALB_ARN" \
+    --region "$REGION"
+  echo "  ALB '$ALB_NAME' eliminado, esperando..."
+  aws elbv2 wait load-balancers-deleted \
+    --load-balancer-arns "$ALB_ARN" \
+    --region "$REGION"
+  echo "  ✓ ALB eliminado"
+else
+  echo "  ALB '$ALB_NAME' no encontrado (ya borrado o nunca creado)"
+fi
+
 
 # ---------------------------------------------
 # 1. Vaciar bucket S3 antes de borrar el stack
