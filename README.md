@@ -11,7 +11,7 @@
 **Paso 3**: Instalar git y clonar el repositorio en el bastión Amazon Linux 2023 (EC2):
 ```bash
    sudo dnf install git -y
-   git clone https://github.com/etsiinf-marcoscr/arch2_deployment.git
+   git clone https://github.com/etsiinf-marcoscr/arch2sb_deployment.git
 ```
 
 **Paso 4**: Configurar las credenciales AWS (también podría usarse ```aws login```):
@@ -26,12 +26,12 @@
 
 **Paso 6**: Dar permisos de ejecución al script de despliegue y ejecutarlo:
 ```bash
-   cd arch2_deployment/
-   chmod +x arch2-setup.sh && ./arch2-setup.sh
+   cd arch2sb_deployment/
+   chmod +x arch2sb-setup.sh && ./arch2sb-setup.sh
 ```
 
 **Paso 7 (_opcional_)**: Para borrar los recursos desplegados por el script, ejecute el siguiente comando:
 ```bash
-   chmod +x arch2-teardown.sh && ./arch2-teardown.sh
+   chmod +x arch2sb-teardown.sh && ./arch2sb-teardown.sh
 ```
 _Tenga en cuenta que necesitará eliminar todavía el bastión EC2, el certificado ACM autofirmado y la VPC manualmente desde la consola de AWS en sus respectivos servicios, ya que el script no los borra._

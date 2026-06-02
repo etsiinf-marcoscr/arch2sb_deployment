@@ -29,7 +29,7 @@ MYPASS="coffee_beans_for_all"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESOURCES_DIR="$SCRIPT_DIR/resources"
 KEY_PATH="$SCRIPT_DIR/arch2.pem"
-TEMPLATE_FILE="$SCRIPT_DIR/autodeployment_noECS-arch2.yaml"
+TEMPLATE_FILE="$SCRIPT_DIR/arch2sb-deployment.yaml"
 KEY_PAIR_NAME="${EC2_KEY_PAIR:-$(basename "$KEY_PATH" .pem)}"
 
 if [ ! -d "$RESOURCES_DIR" ]; then

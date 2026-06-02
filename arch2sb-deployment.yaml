@@ -492,6 +492,7 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: "cafe/node-web-app"
+      EmptyOnDelete: true
       RepositoryPolicyText:
         Version: "2012-10-17"
         Statement:
@@ -505,6 +506,7 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: "cafe/products-api"
+      EmptyOnDelete: true
       RepositoryPolicyText:
         Version: "2012-10-17"
         Statement:
@@ -518,6 +520,7 @@ Resources:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName: "cafe/report-service"
+      EmptyOnDelete: true
       RepositoryPolicyText:
         Version: "2012-10-17"
         Statement:
