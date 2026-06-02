@@ -39,4 +39,4 @@
 ```bash
    chmod +x arch2sb-teardown.sh && ./arch2sb-teardown.sh
 ```
-_Tenga en cuenta que necesitará eliminar todavía el bastión EC2, el certificado ACM autofirmado y la VPC manualmente desde la consola de AWS en sus respectivos servicios, ya que el script no los borra._
+_Tenga en cuenta que necesitará eliminar todavía el bastión EC2 y la VPC manualmente desde la consola de AWS en sus respectivos servicios, ya que el script no los borra. Recuerde que el entorno Sandbox suele eliminar todos los recursos al finalizar el laboratorio de todas formas._
