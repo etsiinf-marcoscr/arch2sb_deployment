@@ -3,7 +3,8 @@
 # arch2sb-teardown.sh - Limpieza completa del stack cafe
 # =============================================================
 # Orden de operaciones:
-#   1. Vaciar bucket S3 de reportes (antes de borrar el stack)
+#   TODO: 0. Borrar el ALB para poder borrar luego los TGs
+#   1. Vaciar bucket S3 de reportes y web (antes de borrar el stack)
 #   2. Borrar el stack CloudFormation y esperar
 #   3. Borrar los Target Groups huérfanos (DeletionPolicy: Retain)
 # =============================================================
