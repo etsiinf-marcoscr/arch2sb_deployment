@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyd
+*.pem
+
+# Ignore rollback_points directory
+rollback_points/
+
+# Ignore compressed bundles
+*.tar.gz
+*.zip

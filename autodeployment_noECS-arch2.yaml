@@ -1,0 +1,660 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Cafe architecture - EC2 + Docker + CF sandbox"
+# REQUISITO PREVIO: la VPC debe tener habilitados
+# 'DNS resolution' y 'DNS hostnames' antes de desplegar este stack.
+# En la consola: VPC -> selecciona tu VPC -> Actions -> Edit VPC settings
+# y activa ambas opciones.
+
+Parameters:
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: "VPC con DNS resolution y DNS hostnames habilitados"
+
+  PublicSubnetOne:
+    Type: AWS::EC2::Subnet::Id
+    Description: "Subnet publica principal (us-east-1a)"
+
+  StudentEmail:
+    Type: String
+    Description: "Email para recibir reportes SNS y como usuario Cognito"
+
+  EC2KeyPair:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: "Key pair para acceder a las EC2 por SSH"
+
+  AMIID:
+    Type: String
+    Default: "ami-0c614dee691cbbf37"
+    Description: "AMI Amazon Linux 2023 us-east-1"
+
+Resources:
+
+  # -------------------------------------------
+  # NETWORKING
+  # -------------------------------------------
+
+  ExtraSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VpcId
+      AvailabilityZone: !Select [1, !GetAZs ""]
+      CidrBlock: "10.0.2.0/24"
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: "ExtraSubnet-AZ2"
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "Subnets for Aurora"
+      SubnetIds:
+        - !Ref ExtraSubnet
+        - !Ref PublicSubnetOne
+
+  DataSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Aurora + Memcached"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: tcp
+          FromPort: 11211
+          ToPort: 11211
+      VpcId: !Ref VpcId
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "EC2 Docker hosts"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5001
+      VpcId: !Ref VpcId
+
+  # -------------------------------------------
+  # EC2 - products-api Flask :5000
+  # -------------------------------------------
+
+  EC2ProductsApi:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      ImageId: !Ref AMIID
+      KeyName: !Ref EC2KeyPair
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetOne
+          GroupSet:
+            - !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: "cafe-products-api"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf install -y docker python3-pip
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ec2-user
+          chmod 666 /var/run/docker.sock
+
+  # -------------------------------------------
+  # EC2 - report-service Flask :5001
+  # También corre el sqs_worker como proceso
+  # directo (no Docker) para consumir la cola
+  # -------------------------------------------
+
+  EC2ReportService:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.micro
+      ImageId: !Ref AMIID
+      KeyName: !Ref EC2KeyPair
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetOne
+          GroupSet:
+            - !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: "cafe-report-service"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf install -y docker python3-pip
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ec2-user
+          chmod 666 /var/run/docker.sock
+          # Dependencias para el sqs_worker
+          pip3 install boto3 pymysql pymemcache --break-system-packages
+
+  # -------------------------------------------
+  # EC2 - node-web-app :3000
+  # -------------------------------------------
+
+  EC2NodeWebApp:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: t3.small
+      ImageId: !Ref AMIID
+      KeyName: !Ref EC2KeyPair
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: "0"
+          SubnetId: !Ref PublicSubnetOne
+          GroupSet:
+            - !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: "cafe-node-web-app"
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf install -y docker
+          systemctl start docker
+          systemctl enable docker
+          usermod -aG docker ec2-user
+          chmod 666 /var/run/docker.sock
+
+  # -------------------------------------------
+  # S3
+  # -------------------------------------------
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: false
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+
+  S3BucketReports:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: Name
+          Value: cafe-reports-bucket
+
+  # -------------------------------------------
+  # CLOUDFRONT
+  # -------------------------------------------
+
+  CafeOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "access-identity-cafe-website"
+
+  CafeCloudfront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        HttpVersion: "http2"
+        IPV6Enabled: true
+        DefaultRootObject: "index.html"
+        PriceClass: "PriceClass_All"
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+
+        Origins:
+          - Id: "S3-cafeOrigin"
+            DomainName: !GetAtt S3Bucket.DomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Join
+                - ""
+                - - "origin-access-identity/cloudfront/"
+                  - !Ref CafeOAI
+
+          - Id: "products-api-origin"
+            DomainName: !GetAtt EC2ProductsApi.PublicDnsName
+            CustomOriginConfig:
+              HTTPPort: 5000
+              HTTPSPort: 443
+              OriginProtocolPolicy: "http-only"
+
+          - Id: "report-service-origin"
+            DomainName: !GetAtt EC2ReportService.PublicDnsName
+            CustomOriginConfig:
+              HTTPPort: 5001
+              HTTPSPort: 443
+              OriginProtocolPolicy: "http-only"
+
+        CacheBehaviors:
+          - PathPattern: "/products*"
+            TargetOriginId: "products-api-origin"
+            ViewerProtocolPolicy: "allow-all"
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            MinTTL: 0
+            DefaultTTL: 0
+            MaxTTL: 0
+            Compress: false
+
+          - PathPattern: "/create_report*"
+            TargetOriginId: "report-service-origin"
+            ViewerProtocolPolicy: "allow-all"
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods: [GET, HEAD]
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            MinTTL: 0
+            DefaultTTL: 0
+            MaxTTL: 0
+            Compress: false
+
+          # /bean_products -> report-service
+          - PathPattern: "/bean_products*"
+            TargetOriginId: "report-service-origin"
+            ViewerProtocolPolicy: "allow-all"
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            ForwardedValues:
+              QueryString: false
+              Cookies:
+                Forward: none
+            MinTTL: 0
+            DefaultTTL: 0
+            MaxTTL: 0
+            Compress: false
+
+        DefaultCacheBehavior:
+          TargetOriginId: "S3-cafeOrigin"
+          ViewerProtocolPolicy: "allow-all"
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+          Compress: true
+
+  # -------------------------------------------
+  # DYNAMODB
+  # -------------------------------------------
+
+  myDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: "FoodProducts"
+      AttributeDefinitions:
+        - AttributeName: "product_name"
+          AttributeType: "S"
+        - AttributeName: "special"
+          AttributeType: "N"
+      KeySchema:
+        - AttributeName: "product_name"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      GlobalSecondaryIndexes:
+        - IndexName: "special_GSI"
+          KeySchema:
+            - AttributeName: "special"
+              KeyType: "HASH"
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput:
+            ReadCapacityUnits: "1"
+            WriteCapacityUnits: "1"
+
+  # -------------------------------------------
+  # AURORA SERVERLESS
+  # -------------------------------------------
+
+  RDSCluster:
+    Type: AWS::RDS::DBCluster
+    DependsOn: DBSubnetGroup
+    Properties:
+      DatabaseName: suppliers
+      DBClusterIdentifier: "supplierDB"
+      Engine: aurora-mysql
+      EngineMode: provisioned
+      EngineVersion: "8.0.mysql_aurora.3.08.0"
+      MasterUsername: "admin"
+      MasterUserPassword: "coffee_beans_for_all"
+      ServerlessV2ScalingConfiguration:
+        MinCapacity: 2
+        MaxCapacity: 8
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !GetAtt DataSecurityGroup.GroupId
+      EnableHttpEndpoint: true
+      AvailabilityZones:
+        - !Select [0, !GetAZs ""]
+        - !Select [1, !GetAZs ""]
+
+  RDSDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-mysql
+      DBInstanceClass: db.serverless
+      DBClusterIdentifier: !Ref RDSCluster
+
+  # -------------------------------------------
+  # ELASTICACHE - Memcached (1 nodo sandbox)
+  # -------------------------------------------
+
+  MemcachedClusterSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: "MyMemcachedSubnet"
+      Description: "Subnets for Memcached"
+      SubnetIds:
+        - !Ref ExtraSubnet
+        - !Ref PublicSubnetOne
+
+  MemcachedCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    DependsOn: [RDSCluster, MemcachedClusterSubnetGroup]
+    Properties:
+      CacheNodeType: cache.t3.micro
+      CacheSubnetGroupName: "MyMemcachedSubnet"
+      ClusterName: "Memcached"
+      Engine: memcached
+      EngineVersion: "1.6.6"
+      NumCacheNodes: 1
+      Port: 11211
+      VpcSecurityGroupIds:
+        - !GetAtt DataSecurityGroup.GroupId
+
+  # -------------------------------------------
+  # SNS - email de reportes (existente)
+  # -------------------------------------------
+
+  SNSForSendingEmail:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: "Email Report"
+      FifoTopic: false
+      TopicName: email
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref StudentEmail
+
+  # -------------------------------------------
+  # SNS FIFO - actualizaciones de inventario
+  # Los suppliers publican aquí via producer.py
+  # -------------------------------------------
+
+  SNSInventoryTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "updated_beans_sns.fifo"
+      FifoTopic: true
+      ContentBasedDeduplication: true
+
+  # -------------------------------------------
+  # SQS - Dead Letter Queue (DLQ)
+  # Recibe mensajes que fallan N veces seguidas
+  # -------------------------------------------
+
+  SQSInventoryDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "inventory-dlq.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      MessageRetentionPeriod: 86400  # 1 día
+
+  # -------------------------------------------
+  # SQS FIFO - cola principal de inventario
+  # El sqs_worker consume de aquí
+  # Tras 3 fallos el mensaje va a la DLQ
+  # -------------------------------------------
+
+  SQSInventoryQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "inventory-queue.fifo"
+      FifoQueue: true
+      ContentBasedDeduplication: true
+      VisibilityTimeout: 30
+      MessageRetentionPeriod: 86400   # 1 día
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt SQSInventoryDLQ.Arn
+        maxReceiveCount: 3            # 3 intentos antes de ir a la DLQ
+
+  # -------------------------------------------
+  # Política SQS - permite a SNS publicar
+  # -------------------------------------------
+
+  SQSInventoryQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SQSInventoryQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt SQSInventoryQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref SNSInventoryTopic
+
+  # -------------------------------------------
+  # Suscripción SNS -> SQS
+  # El topic reenvía automáticamente a la cola
+  # -------------------------------------------
+
+  SNSToSQSSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref SNSInventoryTopic
+      Protocol: sqs
+      Endpoint: !GetAtt SQSInventoryQueue.Arn
+      # RawMessageDelivery=true para que el worker
+      # reciba el JSON limpio sin el wrapper de SNS
+      RawMessageDelivery: false
+
+  # -------------------------------------------
+  # ECR
+  # -------------------------------------------
+
+  ECRNodeWebApp:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "cafe/node-web-app"
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "ecr:*"
+
+  ECRProductsApi:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "cafe/products-api"
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "ecr:*"
+
+  ECRReportService:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: "cafe/report-service"
+      RepositoryPolicyText:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: "ecr:*"
+
+  # -------------------------------------------
+  # COGNITO
+  # -------------------------------------------
+
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: admin_only
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AliasAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+      UsernameConfiguration:
+        CaseSensitive: false
+      UserPoolName: "the_cafe"
+
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub "cafe-${AWS::AccountId}"
+      UserPoolId: !Ref CognitoUserPool
+
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: CognitoUserPoolDomain
+    Properties:
+      AllowedOAuthFlows: [implicit]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes: [email, openid]
+      CallbackURLs:
+        - !Sub "https://${CafeCloudfront.DomainName}/callback.html"
+      ClientName: "the_cafe_app_client"
+      DefaultRedirectURI: !Sub "https://${CafeCloudfront.DomainName}/callback.html"
+      LogoutURLs:
+        - !Sub "https://${CafeCloudfront.DomainName}/callback.html"
+      SupportedIdentityProviders: [COGNITO]
+      UserPoolId: !Ref CognitoUserPool
+
+# -------------------------------------------------------------
+# OUTPUTS
+# -------------------------------------------------------------
+Outputs:
+
+  EC2ProductsApiIP:
+    Description: "IP publica products-api :5000"
+    Value: !GetAtt EC2ProductsApi.PublicIp
+    Export:
+      Name: EC2ProductsApiIP
+
+  EC2ProductsApiDNS:
+    Description: "DNS publico products-api"
+    Value: !GetAtt EC2ProductsApi.PublicDnsName
+    Export:
+      Name: EC2ProductsApiDNS
+
+  EC2ReportServiceIP:
+    Description: "IP publica report-service :5001"
+    Value: !GetAtt EC2ReportService.PublicIp
+    Export:
+      Name: EC2ReportServiceIP
+
+  EC2ReportServiceDNS:
+    Description: "DNS publico report-service"
+    Value: !GetAtt EC2ReportService.PublicDnsName
+    Export:
+      Name: EC2ReportServiceDNS
+
+  EC2NodeWebAppIP:
+    Description: "IP publica node-web-app :3000"
+    Value: !GetAtt EC2NodeWebApp.PublicIp
+    Export:
+      Name: EC2NodeWebAppIP
+
+  CloudFrontURL:
+    Description: "URL CloudFront"
+    Value: !Sub "https://${CafeCloudfront.DomainName}"
+    Export:
+      Name: CloudFrontURL
+
+  AuroraEndpoint:
+    Description: "Aurora endpoint"
+    Value: !GetAtt RDSCluster.Endpoint.Address
+    Export:
+      Name: AuroraEndpoint
+
+  S3WebBucket:
+    Description: "Bucket web"
+    Value: !Ref S3Bucket
+    Export:
+      Name: S3WebBucket
+
+  S3ReportsBucket:
+    Description: "Bucket reportes"
+    Value: !Ref S3BucketReports
+    Export:
+      Name: S3ReportsBucket
+
+  SNSEmailTopicArn:
+    Description: "ARN SNS reportes por email"
+    Value: !Ref SNSForSendingEmail
+    Export:
+      Name: SNSEmailTopicArn
+
+  SNSInventoryTopicArn:
+    Description: "ARN SNS FIFO para actualizaciones de inventario (usado por producer.py)"
+    Value: !Ref SNSInventoryTopic
+    Export:
+      Name: SNSInventoryTopicArn
+
+  SQSInventoryQueueUrl:
+    Description: "URL de la cola SQS FIFO de inventario (usado por sqs_worker.py)"
+    Value: !Ref SQSInventoryQueue
+    Export:
+      Name: SQSInventoryQueueUrl
+
+  SQSInventoryDLQUrl:
+    Description: "URL de la Dead Letter Queue de inventario"
+    Value: !Ref SQSInventoryDLQ
+    Export:
+      Name: SQSInventoryDLQUrl
