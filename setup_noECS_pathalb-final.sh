@@ -2,9 +2,6 @@
 # =============================================================
 # arch2sb.sh - Sandbox EC2 + Docker + CF
 # =============================================================
-# Igual que setup_noECS-final.sh pero añade un ALB único con
-# path-based routing para validar el diseño antes de pasar a ECS:
-#
 #   /products*       -> EC2 products-api  :5000  (prio 10)
 #   /create_report*  -> EC2 report-service:5001  (prio 20)
 #   /bean_products*  -> EC2 report-service:5001  (prio 30)
@@ -15,6 +12,8 @@
 #
 # Configuración previa:
 #   1. Tener /resources y arch2.pem en el mismo nivel que este script
+#   En caso de tener la clave de acceso a las EC2 otro nombre,
+#   exportar la variable EC2_KEY_PAIR con el nombre del Key Pair (sin .pem)
 #   2. export EMAIL="tu@email.com"
 #   3. chmod +x arch2sb.sh && ./arch2sb.sh
 # =============================================================
@@ -27,8 +26,96 @@ echo "============================================="
 STACK_NAME="arch2sb"
 REGION="us-east-1"
 MYPASS="coffee_beans_for_all"
-KEY_PATH="/home/ec2-user/arch2.pem"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RESOURCES_DIR="$SCRIPT_DIR/resources"
+KEY_PATH="$SCRIPT_DIR/arch2.pem"
+TEMPLATE_FILE="$SCRIPT_DIR/autodeployment_noECS-arch2.yaml"
+KEY_PAIR_NAME="${EC2_KEY_PAIR:-$(basename "$KEY_PATH" .pem)}"
+
+if [ ! -d "$RESOURCES_DIR" ]; then
+  echo "ERROR: no existe directorio de recursos en $RESOURCES_DIR"
+  exit 1
+fi
+
+if [ ! -f "$KEY_PATH" ]; then
+  echo "ERROR: no existe la llave PEM en $KEY_PATH"
+  exit 1
+fi
+
+if [ ! -f "$TEMPLATE_FILE" ]; then
+  echo "ERROR: no existe el template CloudFormation en $TEMPLATE_FILE"
+  exit 1
+fi
+
 chmod 400 "$KEY_PATH"
+
+# ---------------------------------------------
+# 0. Desplegar stack CloudFormation (si no existe)
+# ---------------------------------------------
+echo ""
+echo ">>> Comprobando stack CloudFormation..."
+
+STACK_STATUS=$(aws cloudformation describe-stacks \
+  --stack-name "$STACK_NAME" \
+  --query "Stacks[0].StackStatus" \
+  --output text \
+  --region "$REGION" 2>/dev/null || echo "DOES_NOT_EXIST")
+
+if [ "$STACK_STATUS" = "DOES_NOT_EXIST" ]; then
+  echo "  Stack no existe, desplegando..."
+
+  if [ -z "$EMAIL" ]; then
+    echo 'ERROR: variable EMAIL no definida. Ejecuta: export EMAIL="tu@email.com"'
+    exit 1
+  fi
+
+  TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" \
+    -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+  MAC=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+    http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+
+  VPC_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+    "http://169.254.169.254/latest/meta-data/network/interfaces/macs/${MAC}/vpc-id")
+
+  SUBNET_ID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" \
+    "http://169.254.169.254/latest/meta-data/network/interfaces/macs/${MAC}/subnet-id")
+
+  echo "  VPC detectada:    $VPC_ID"
+  echo "  Subnet detectada: $SUBNET_ID"
+  echo "  KeyPair usada:    $KEY_PAIR_NAME"
+
+  LAB_ROLE_ARN=$(aws iam get-role \
+    --role-name "LabRole" \
+    --query "Role.Arn" --output text)
+
+  aws cloudformation create-stack \
+    --stack-name "$STACK_NAME" \
+    --template-body "file://$TEMPLATE_FILE" \
+    --parameters \
+      ParameterKey=VpcId,ParameterValue="$VPC_ID" \
+      ParameterKey=PublicSubnetOne,ParameterValue="$SUBNET_ID" \
+      ParameterKey=StudentEmail,ParameterValue="$EMAIL" \
+      ParameterKey=EC2KeyPair,ParameterValue="$KEY_PAIR_NAME" \
+    --role-arn "$LAB_ROLE_ARN" \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --region "$REGION"
+
+  echo "  Stack lanzado, esperando CREATE_COMPLETE (puede tardar 8-15 min)..."
+  aws cloudformation wait stack-create-complete \
+    --stack-name "$STACK_NAME" \
+    --region "$REGION"
+  echo "  ✓ Stack desplegado"
+
+elif [ "$STACK_STATUS" = "CREATE_COMPLETE" ] || \
+     [ "$STACK_STATUS" = "UPDATE_COMPLETE" ]; then
+  echo "  Stack ya existe y esta en estado $STACK_STATUS, continuando..."
+
+else
+  echo "ERROR: el stack existe pero esta en estado inesperado: $STACK_STATUS"
+  echo "  Revisa la consola de CloudFormation antes de continuar."
+  exit 1
+fi
 
 # ---------------------------------------------
 # 1. Leer outputs del stack CloudFormation
@@ -165,7 +252,7 @@ aws ecr get-login-password --region "$REGION" \
 # ---------------------------------------------
 echo ""
 echo ">>> Build node-web-app..."
-cd /home/ec2-user/resources/codebase_partner
+cd "$RESOURCES_DIR/codebase_partner"
 
 cat > Dockerfile <<'DOCKERFILE'
 FROM node:11-alpine
@@ -186,7 +273,7 @@ docker push "${ECR_BASE}/cafe/node-web-app"
 # ---------------------------------------------
 echo ""
 echo ">>> Build products-api..."
-cd /home/ec2-user/resources/products_api
+cd "$RESOURCES_DIR/products_api"
 docker build --tag cafe/products-api .
 docker tag cafe/products-api:latest "${ECR_BASE}/cafe/products-api:latest"
 docker push "${ECR_BASE}/cafe/products-api"
@@ -196,7 +283,7 @@ docker push "${ECR_BASE}/cafe/products-api"
 # ---------------------------------------------
 echo ""
 echo ">>> Build report-service..."
-cd /home/ec2-user/resources/report_service
+cd "$RESOURCES_DIR/report_service"
 docker build --tag cafe/report-service .
 docker tag cafe/report-service:latest "${ECR_BASE}/cafe/report-service:latest"
 docker push "${ECR_BASE}/cafe/report-service"
@@ -220,7 +307,7 @@ FLUSH PRIVILEGES;
 EOF
 
 mysql -h "$AURORA_ENDPOINT" -P 3306 -u admin -p"$MYPASS" COFFEE \
-  < /home/ec2-user/resources/coffee_db_dump.sql
+  < "$RESOURCES_DIR/coffee_db_dump.sql"
 echo "Aurora poblada."
 
 # ---------------------------------------------
@@ -228,8 +315,7 @@ echo "Aurora poblada."
 # ---------------------------------------------
 echo ""
 echo ">>> Poblando DynamoDB con productos..."
-cd /home/ec2-user
-python3 resources/seed.py
+python3 "$RESOURCES_DIR/seed.py"
 echo "DynamoDB poblado."
 
 # ---------------------------------------------
@@ -303,7 +389,7 @@ echo ""
 echo ">>> Desplegando sqs_worker..."
 
 scp -i "$KEY_PATH" \
-    /home/ec2-user/resources/report_service/sqs_worker.py \
+  "$RESOURCES_DIR/report_service/sqs_worker.py" \
     ec2-user@${REPORT_IP}:/home/ec2-user/sqs_worker.py
 
 run_remote "$REPORT_IP" "pip3 install boto3 pymysql pymemcache" "pip3 install worker deps"
@@ -638,7 +724,7 @@ COGNITO_DOMAIN=$(aws cognito-idp describe-user-pool \
 
 COGNITO_LOGIN_URL="https://${COGNITO_DOMAIN}.auth.${REGION}.amazoncognito.com/login?client_id=${COGNITO_CLIENT_ID}&response_type=token&scope=email+openid&redirect_uri=https://${DISTRO_DOMAIN}/callback.html"
 
-cat > /home/ec2-user/resources/website/config.js << EOF
+cat > "$RESOURCES_DIR/website/config.js" << EOF
 window.COFFEE_CONFIG = {
         API_GW_BASE_URL_STR: "https://${DISTRO_DOMAIN}",
         API_GW_REPORT_URL_STR: "https://${DISTRO_DOMAIN}",
@@ -647,7 +733,7 @@ window.COFFEE_CONFIG = {
 EOF
 
 echo "config.js actualizado:"
-cat /home/ec2-user/resources/website/config.js
+cat "$RESOURCES_DIR/website/config.js"
 
 # ---------------------------------------------
 # 20. Crear usuario Cognito "frank"
@@ -703,7 +789,7 @@ echo "  Política S3 aplicada."
 # ---------------------------------------------
 echo ""
 echo ">>> Subiendo web estática a S3..."
-aws s3 cp /home/ec2-user/resources/website "s3://$S3_WEB_BUCKET/" \
+aws s3 cp "$RESOURCES_DIR/website" "s3://$S3_WEB_BUCKET/" \
   --recursive \
   --cache-control "max-age=0" \
   --region "$REGION"
