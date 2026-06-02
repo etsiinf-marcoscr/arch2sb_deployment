@@ -14,23 +14,28 @@
    git clone https://github.com/etsiinf-marcoscr/arch2sb_deployment.git
 ```
 
-**Paso 4**: Configurar las credenciales AWS (también podría usarse ```aws login```):
+**Paso 4**: Enviar la clave de acceso SSH (desde su terminal local donde ha descargado la clave):
+```bash
+   scp -i arch2.pem arch2.pem ec2-user@<IP-PUBLICA-EC2>:~/arch2sb_deployment/
+```
+
+**Paso 5**: Configurar las credenciales AWS (también podría usarse ```aws login```):
 ```bash
    aws configure
 ```
 
-**Paso 5**: Exportar la variable de entorno ```EMAIL``` que se le asociará al usuario 'frank' creado en el stack:
+**Paso 6**: Exportar la variable de entorno ```EMAIL``` que se le asociará al usuario 'frank' creado en el stack:
 ```bash
    export EMAIL="tu@email.com"
 ```
 
-**Paso 6**: Dar permisos de ejecución al script de despliegue y ejecutarlo:
+**Paso 7**: Dar permisos de ejecución al script de despliegue y ejecutarlo:
 ```bash
    cd arch2sb_deployment/
    chmod +x arch2sb-setup.sh && ./arch2sb-setup.sh
 ```
 
-**Paso 7 (_opcional_)**: Para borrar los recursos desplegados por el script, ejecute el siguiente comando:
+**Paso 8 (_opcional_)**: Para borrar los recursos desplegados por el script, ejecute el siguiente comando:
 ```bash
    chmod +x arch2sb-teardown.sh && ./arch2sb-teardown.sh
 ```
