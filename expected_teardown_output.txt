@@ -4,95 +4,97 @@
 Stack encontrado en estado: CREATE_COMPLETE
 
 >>> Eliminando ALB compartido...
-  ✓ Listener borrado: arn:aws:elasticloadbalancing:us-east-1:884415332892:listener/app/cafe-shared-alb/85cdddddcaa1f312/0cb453d840ae06be
+  ✓ Listener borrado: arn:aws:elasticloadbalancing:us-east-1:884415332892:listener/app/cafe-shared-alb/8bf6b38c2e27fe65/1982572322445247
   ALB 'cafe-shared-alb' eliminado, esperando...
   ✓ ALB eliminado
 
 >>> Vaciando bucket S3 de reportes...
-  Bucket: arch2sb-s3bucketreports-eslgc4tz9z8w
+  Bucket: arch2sb-s3bucketreports-5j8h5986xezg
+delete: s3://arch2sb-s3bucketreports-5j8h5986xezg/report-026eee60eaf7492bbe10624dd0d1ac83.html
+delete: s3://arch2sb-s3bucketreports-5j8h5986xezg/report-8c31a37c46b14a73aadeb263be7afaf0.html
   ✓ Objetos borrados
   ✓ Bucket vaciado
-  Bucket web: arch2sb-s3bucket-xaswj5iipzbz
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/all_products.json
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/beans/excelsa.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/beans/arabica.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/favicon.ico
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/blueberry_bagel.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/blueberry_jelly_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/blueberry_bagel.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/apple_pie_slice.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/blueberry_jelly_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/boston_cream_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/beans/liberica.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/apple_pie_slice.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/boston_cream_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/apple_pie.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/callback.html
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/beans/robusta.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cherry_pie_slice.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cherry_pie_slice.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cherry_pie.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/apple_pie.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/beans.json
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_chip_cupcake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_chip_cupcake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cherry_pie.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cupcake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_iced_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cupcake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/expanded.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_iced_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cinnamon_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/eclair.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/garlic_bagel.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/garlic_bagel.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/lemon_pie.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cake_slice.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/cinnamon_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/config.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/all_products_on_offer.json
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/lemon_pie.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/chocolate_cake_slice.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/lemon_pie_slice.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/lemon_pie_slice.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/peanutbutter_and_chocolate_cupcake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/plain_bagel.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/poppy_seed_bagel.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/eclair.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/plain_bagel.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/poppy_seed_bagel.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/powdered_sugar_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/raspberry_jelly_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/powdered_sugar_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/strawberry_cupcake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/strawberry_cupcake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/raspberry_jelly_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/peanut_butter_chocolate_cupcake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/vanilla_cupcake.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/vanilla_glazed_doughnut.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/vanilla_cupcake.jpeg
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/items/vanilla_glazed_doughnut.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/logo.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/not_expanded.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/scripts/coffee.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/main_coffee_shop.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/index.html
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/scripts/main.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/scripts/jquery-3.6.0.min.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/images/main_coffee_shop_1.png
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/coffee.css
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/main.css
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/pastries.css
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/spint.md
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/scripts/pastries.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/scripts/navigation.js
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/navigation.css
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/reset.css
-delete: s3://arch2sb-s3bucket-xaswj5iipzbz/styles/beans.css
+  Bucket web: arch2sb-s3bucket-gqvot7d6pbjm
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/favicon.ico
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/all_products.json
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/apple_pie_slice.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/blueberry_bagel.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/blueberry_bagel.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/blueberry_jelly_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/beans/excelsa.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/beans/robusta.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/expanded.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/blueberry_jelly_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/apple_pie.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/apple_pie.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/beans.json
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/config.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/apple_pie_slice.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/boston_cream_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/boston_cream_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cherry_pie.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cherry_pie.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_chip_cupcake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cherry_pie_slice.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cake_slice.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cake_slice.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_chip_cupcake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cherry_pie_slice.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cupcake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/beans/arabica.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cupcake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_iced_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/callback.html
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_iced_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/all_products_on_offer.json
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/beans/liberica.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cinnamon_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/eclair.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/eclair.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/cinnamon_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/lemon_pie.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/lemon_pie.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/garlic_bagel.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/garlic_bagel.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/lemon_pie_slice.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/lemon_pie_slice.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/peanut_butter_chocolate_cupcake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/peanutbutter_and_chocolate_cupcake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/plain_bagel.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/poppy_seed_bagel.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/poppy_seed_bagel.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/plain_bagel.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/powdered_sugar_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/powdered_sugar_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/raspberry_jelly_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/raspberry_jelly_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/strawberry_cupcake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/vanilla_glazed_doughnut.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/vanilla_glazed_doughnut.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/vanilla_cupcake.jpeg
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/strawberry_cupcake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/vanilla_cupcake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/logo.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/main_coffee_shop_1.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/main_coffee_shop.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/not_expanded.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/index.html
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/scripts/jquery-3.6.0.min.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/scripts/navigation.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/scripts/coffee.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/scripts/main.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/images/items/chocolate_cake.png
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/beans.css
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/spint.md
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/navigation.css
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/reset.css
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/scripts/pastries.js
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/coffee.css
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/pastries.css
+delete: s3://arch2sb-s3bucket-gqvot7d6pbjm/styles/main.css
   ✓ Objetos web borrados
   ✓ Bucket web vaciado
 
