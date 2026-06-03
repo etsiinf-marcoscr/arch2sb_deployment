@@ -139,6 +139,7 @@ AURORA_ENDPOINT=$(get_output "AuroraEndpoint")
 S3_WEB_BUCKET=$(get_output "S3WebBucket")
 S3_REPORTS_BUCKET=$(get_output "S3ReportsBucket")
 SNS_TOPIC_ARN=$(get_output "SNSEmailTopicArn")
+SNS_INVENTORY_TOPIC_ARN=$(get_output "SNSInventoryTopicArn")
 SQS_QUEUE_URL=$(get_output "SQSInventoryQueueUrl")
 ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 ECR_BASE="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
@@ -405,6 +406,12 @@ run_remote "$REPORT_IP" \
    nohup python3 /home/ec2-user/sqs_worker.py > /home/ec2-user/worker.log 2>&1 &
    echo Worker PID: \$!" \
   "sqs_worker start"
+
+# Actualizar de paso el placeholder del script de envio de inventario a SNS
+# Se lee el fichero .template y se sobreescribe el .py con el valor real del SNS_INVENTORY_TOPIC_ARN
+sed "s|<SNS_TOPIC_ARN>|${SNS_INVENTORY_TOPIC_ARN}|g" \
+  "$RESOURCES_DIR/sqs-sns/send_beans_update.py.template" \
+  > "$RESOURCES_DIR/sqs-sns/send_beans_update.py"
 
 # ---------------------------------------------
 # 12. Obtener VPC y SGs del stack para el ALB
