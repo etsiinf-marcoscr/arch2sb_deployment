@@ -649,12 +649,8 @@ echo "  ✓ Reglas creadas"
 echo ""
 echo ">>> Actualizando distribución CloudFront para usar el ALB..."
 
-# Actualizar CloudFront via Python: sustituir los dos origins de EC2
-# por un único "alb-origin" y redirigir los CacheBehaviors.
-# La API update_distribution exige campos que get_distribution_config
-# puede devolver vacíos o ausentes (OriginPath, CustomHeaders, OriginShield…).
-# normalize_origin() los rellena con sus valores por defecto para evitar
-# errores.
+# Actualizar CloudFront via Python
+# Proceso equiparable a un cambio de rutas en la versión ECS, pero aquí el origen nuevo es un ALB en vez de las EC2 directamente.
 python3 - "$ALB_DNS" "$DISTRO_ID" <<'PYEOF'
 import sys, boto3
 
